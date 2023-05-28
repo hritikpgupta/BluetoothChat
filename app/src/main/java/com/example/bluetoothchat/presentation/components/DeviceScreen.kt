@@ -26,6 +26,13 @@ fun DeviceScreen(
     onStopScan: () -> Unit,
 ) {
     Column (modifier = Modifier.fillMaxSize()){
+        BluetoothDeviceList(
+            pairedDevices = state.pairedDevices,
+            scannedDevices = state.scannedDevices,
+            onClick = {},
+            modifier = Modifier.fillMaxWidth()
+                .weight(1f)
+        )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
             Button(onClick = onStartScan) {
                 Text(text = "Start Scan")
@@ -54,7 +61,8 @@ fun BluetoothDeviceList(
             )
         }
         items(pairedDevices){ device ->
-            Text(text = device.name ?: "(No Name)", modifier = Modifier.fillMaxWidth()
+            Text(text = device.name ?: "(No Name)", modifier = Modifier
+                .fillMaxWidth()
                 .clickable { onClick(device) }
                 .padding(6.dp))
         }
@@ -67,7 +75,8 @@ fun BluetoothDeviceList(
             )
         }
         items(scannedDevices){ device ->
-            Text(text = device.name ?: "(No Name)", modifier = Modifier.fillMaxWidth()
+            Text(text = device.name ?: "(No Name)", modifier = Modifier
+                .fillMaxWidth()
                 .clickable { onClick(device) }
                 .padding(6.dp))
         }

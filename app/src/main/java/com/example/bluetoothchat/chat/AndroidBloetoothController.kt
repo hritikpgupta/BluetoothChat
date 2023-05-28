@@ -1,4 +1,4 @@
-package com.example.bluetoothchat.data.chat
+package com.example.bluetoothchat.chat
 
 import android.Manifest
 import android.annotation.SuppressLint
