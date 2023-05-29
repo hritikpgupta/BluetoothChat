@@ -1,12 +1,7 @@
 package com.example.bluetoothchat.presentation.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -21,16 +16,19 @@ import com.example.bluetoothchat.presentation.BluetoothUiState
 
 @Composable
 fun DeviceScreen(
-    state : BluetoothUiState,
+    state: BluetoothUiState,
     onStartScan: () -> Unit,
     onStopScan: () -> Unit,
+    onDeviceClick: (BluetoothDevice) -> Unit,
+    onStartServer: () -> Unit,
 ) {
-    Column (modifier = Modifier.fillMaxSize()){
+    Column(modifier = Modifier.fillMaxSize()) {
         BluetoothDeviceList(
             pairedDevices = state.pairedDevices,
             scannedDevices = state.scannedDevices,
-            onClick = {},
-            modifier = Modifier.fillMaxWidth()
+            onClick = onDeviceClick,
+            modifier = Modifier
+                .fillMaxWidth()
                 .weight(1f)
         )
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
@@ -39,6 +37,9 @@ fun DeviceScreen(
             }
             Button(onClick = onStopScan) {
                 Text(text = "Stop Scan")
+            }
+            Button(onClick = onStartServer) {
+                Text(text = "Start Server")
             }
         }
     }
@@ -51,7 +52,7 @@ fun BluetoothDeviceList(
     onClick: (BluetoothDevice) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(modifier = modifier){
+    LazyColumn(modifier = modifier) {
         item {
             Text(
                 text = "Paired Devices",
@@ -60,7 +61,7 @@ fun BluetoothDeviceList(
                 modifier = Modifier.padding(16.dp)
             )
         }
-        items(pairedDevices){ device ->
+        items(pairedDevices) { device ->
             Text(text = device.name ?: "(No Name)", modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onClick(device) }
@@ -74,7 +75,7 @@ fun BluetoothDeviceList(
                 modifier = Modifier.padding(16.dp)
             )
         }
-        items(scannedDevices){ device ->
+        items(scannedDevices) { device ->
             Text(text = device.name ?: "(No Name)", modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onClick(device) }
