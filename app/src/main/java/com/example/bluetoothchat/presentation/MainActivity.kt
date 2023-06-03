@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.bluetoothchat.presentation.components.ChatScreen
 import com.example.bluetoothchat.presentation.components.DeviceScreen
 import com.example.bluetoothchat.ui.theme.BluetoothChatTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -49,7 +50,6 @@ class MainActivity : ComponentActivity() {
         ) {
 
         }
-
         val permissionLauncher =
             registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { perms ->
                 val canEnableBluetooth = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -100,6 +100,15 @@ class MainActivity : ComponentActivity() {
                                 Text(text = "Connecting to device...")
                             }
                         }
+
+                        state.isConnected -> {
+                            ChatScreen(
+                                state = state,
+                                onDisconnect = viewModel::disconnectFromDevice,
+                                onSendMessage = viewModel::sendMessage
+                            )
+                        }
+
                         else -> {
                             DeviceScreen(
                                 state = state,

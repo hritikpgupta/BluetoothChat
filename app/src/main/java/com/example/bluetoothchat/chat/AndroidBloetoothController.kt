@@ -29,6 +29,8 @@ class AndroidBluetoothController(
         bluetoothManager?.adapter
     }
 
+    private var dataTransferService: BluetoothDataTransferService? = null
+
     private val _scannedDevices = MutableStateFlow<List<BluetoothDeviceDomain>>(emptyList())
     private val _pairedDevices = MutableStateFlow<List<BluetoothDeviceDomain>>(emptyList())
     private val _isConnected = MutableStateFlow(false)
@@ -68,14 +70,11 @@ class AndroidBluetoothController(
 
     init {
         updatePairedDevices()
-        context.registerReceiver(
-            bluetoothStateReceiver,
-            IntentFilter().apply {
-                addAction(android.bluetooth.BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
-                addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED)
-                addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED)
-            }
-        )
+        context.registerReceiver(bluetoothStateReceiver, IntentFilter().apply {
+            addAction(android.bluetooth.BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED)
+            addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED)
+            addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED)
+        })
     }
 
     override fun startDiscovery() {
@@ -83,8 +82,7 @@ class AndroidBluetoothController(
             return
         }
         context.registerReceiver(
-            foundDeviceReceiver,
-            IntentFilter(android.bluetooth.BluetoothDevice.ACTION_FOUND)
+            foundDeviceReceiver, IntentFilter(android.bluetooth.BluetoothDevice.ACTION_FOUND)
         )
         updatePairedDevices()
         bluetoothAdapter?.startDiscovery()
@@ -117,6 +115,11 @@ class AndroidBluetoothController(
                 emit(ConnectionResult.ConnectionEstablished)
                 currentClientSocket?.let {
                     currentServerSocket?.close()
+                    val service = BluetoothDataTransferService(it)
+                    dataTransferService = service
+                    emitAll(service.listenForIncomingMessages().map {
+                        ConnectionResult.TransferSucceeded(it)
+                    })
                 }
             }
         }.onCompletion {
@@ -132,8 +135,7 @@ class AndroidBluetoothController(
 
             val bluetoothDevice = bluetoothAdapter?.getRemoteDevice(device.address)
 
-            currentClientSocket = bluetoothDevice
-                ?.createRfcommSocketToServiceRecord(
+            currentClientSocket = bluetoothDevice?.createRfcommSocketToServiceRecord(
                     UUID.fromString(SERVICE_UUID)
                 )
             stopDiscovery()
@@ -147,6 +149,11 @@ class AndroidBluetoothController(
                 try {
                     socket.connect()
                     emit(ConnectionResult.ConnectionEstablished)
+                    BluetoothDataTransferService(socket).also {
+                        dataTransferService = it
+                        emitAll(it.listenForIncomingMessages()
+                            .map { ConnectionResult.TransferSucceeded(it) })
+                    }
                 } catch (e: IOException) {
                     socket.close()
                     currentClientSocket = null
@@ -159,13 +166,28 @@ class AndroidBluetoothController(
         }.flowOn(Dispatchers.IO)
     }
 
+    override suspend fun trySendMessage(message: String): BluetoothMessage? {
+        if (!hasPermission(Manifest.permission.BLUETOOTH_CONNECT)) {
+            return null
+        }
+        if (dataTransferService == null){
+            return null
+        }
+        val bluetoothMessage = BluetoothMessage(
+            message = message,
+            senderName = bluetoothAdapter?.name ?: "Unknown Name",
+            isFromLocalUser = true
+        )
+        dataTransferService?.sendMessage(bluetoothMessage.toByteArray())
+        return bluetoothMessage
+    }
+
     override fun closeConnection() {
         currentClientSocket?.close()
         currentServerSocket?.close()
         currentClientSocket = null
         currentServerSocket = null
     }
-
 
     override fun release() {
         context.unregisterReceiver(foundDeviceReceiver)
